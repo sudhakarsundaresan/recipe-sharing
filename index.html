@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sudhakar Sundaresan</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg: #F7F4EF;
+      --surface: #EEE9E1;
+      --border: #DDD8CF;
+      --text-primary: #1A1715;
+      --text-secondary: #6A6460;
+      --accent: #C14F2B;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text-primary);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ── Nav ── */
+    nav {
+      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+      padding: 1.5rem 2.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(247,244,239,0.88);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid transparent;
+      transition: border-color 0.3s ease;
+    }
+    nav.scrolled { border-bottom-color: var(--border); }
+
+    .nav-logo {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem; letter-spacing: -0.01em;
+      color: var(--text-primary); text-decoration: none;
+    }
+
+    .nav-links { display: flex; gap: 2rem; list-style: none; }
+    .nav-links a {
+      font-size: 0.8125rem; font-weight: 400;
+      color: var(--text-secondary); text-decoration: none;
+      letter-spacing: 0.07em; text-transform: uppercase;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: var(--text-primary); }
+
+    /* ── Hero ── */
+    .hero {
+      min-height: 100vh;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 8rem 2.5rem 6rem;
+      position: relative; overflow: hidden;
+    }
+
+    .hero-glow {
+      position: absolute; pointer-events: none;
+    }
+    .hero-glow-1 {
+      top: -15%; right: -8%; width: 55vw; height: 55vw; border-radius: 50%;
+      background: radial-gradient(circle, rgba(193,79,43,0.08) 0%, transparent 68%);
+    }
+    .hero-glow-2 {
+      bottom: 5%; left: -5%; width: 38vw; height: 38vw; border-radius: 50%;
+      background: radial-gradient(circle, rgba(193,79,43,0.05) 0%, transparent 70%);
+    }
+
+    .hero-inner { max-width: 1100px; margin: 0 auto; width: 100%; }
+
+    .hero-eyebrow {
+      font-size: 0.75rem; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--accent); font-weight: 400;
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+    .hero-eyebrow::before {
+      content: ''; display: inline-block;
+      width: 2rem; height: 1px; background: var(--accent);
+    }
+
+    .hero-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(3.5rem, 8vw, 7rem);
+      line-height: 1.0; letter-spacing: -0.03em;
+      margin-bottom: 2rem;
+    }
+    .hero-name em { font-style: italic; color: var(--accent); }
+
+    .hero-bio {
+      max-width: 460px; font-size: 1.0625rem;
+      color: var(--text-secondary); line-height: 1.85;
+      margin-bottom: 3rem;
+    }
+
+    .cta-link {
+      display: inline-flex; align-items: center; gap: 0.625rem;
+      font-size: 0.875rem; font-weight: 500;
+      color: var(--accent); text-decoration: none; letter-spacing: 0.02em;
+      transition: gap 0.28s cubic-bezier(0.34,1.56,0.64,1);
+    }
+    .cta-link:hover { gap: 1rem; }
+
+    .hero-scroll {
+      position: absolute; bottom: 2.5rem; right: 2.5rem;
+      font-size: 0.6875rem; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--text-secondary); writing-mode: vertical-rl;
+      display: flex; align-items: center; gap: 0.5rem;
+    }
+    .hero-scroll::after {
+      content: ''; display: block;
+      width: 1px; height: 3rem; background: var(--border);
+      animation: scrollPulse 2.2s ease-in-out infinite;
+    }
+    @keyframes scrollPulse {
+      0%,100% { opacity: 1; transform: scaleY(1); transform-origin: top; }
+      50% { opacity: 0.4; transform: scaleY(0.35); transform-origin: top; }
+    }
+
+    /* ── Divider / label ── */
+    .divider { width: 100%; height: 1px; background: var(--border); max-width: 1100px; margin: 0 auto; }
+    section { padding: 6rem 2.5rem; max-width: 1100px; margin: 0 auto; }
+
+    .sec-label {
+      font-size: 0.6875rem; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--text-secondary); font-weight: 400;
+      display: flex; align-items: center; gap: 0.75rem;
+      margin-bottom: 3rem;
+    }
+    .sec-label::before {
+      content: ''; display: inline-block;
+      width: 1.5rem; height: 1px; background: var(--text-secondary);
+    }
+
+    /* ── About ── */
+    .about-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: start; }
+
+    .sec-heading {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1.15; letter-spacing: -0.025em;
+      margin-bottom: 2rem;
+    }
+    .sec-heading em { font-style: italic; color: var(--accent); }
+
+    .about-text { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.88; }
+    .about-text + .about-text { margin-top: 1rem; }
+
+    .skills-grid { display: grid; grid-template-columns: 1fr 1fr; }
+    .skill-item {
+      padding: 0.875rem 0; border-bottom: 1px solid var(--border);
+      font-size: 0.875rem; color: var(--text-secondary);
+      display: flex; align-items: center; gap: 0.625rem;
+      transition: color 0.2s;
+    }
+    .skill-item:hover { color: var(--text-primary); }
+    .skill-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+
+    /* ── Work ── */
+    .work-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; overflow: hidden; cursor: pointer;
+      transition: transform 0.32s cubic-bezier(0.34,1.56,0.64,1),
+                  box-shadow 0.3s ease;
+      box-shadow: 0 2px 8px rgba(26,23,21,0.04), 0 8px 24px rgba(26,23,21,0.04);
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 4px 16px rgba(193,79,43,0.08), 0 20px 52px rgba(26,23,21,0.11);
+    }
+
+    .card-img { position: relative; height: 220px; overflow: hidden; }
+    .card-img img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.55s ease; }
+    .card:hover .card-img img { transform: scale(1.05); }
+    .card-img-overlay {
+      position: absolute; inset: 0;
+      background: linear-gradient(to top, rgba(26,23,21,0.52) 0%, transparent 55%);
+    }
+    .card-img-tint { position: absolute; inset: 0; mix-blend-mode: multiply; opacity: 0.22; }
+
+    .card-body { padding: 1.5rem; }
+    .card-tag { font-size: 0.6875rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; }
+    .card-title { font-family: 'DM Serif Display', serif; font-size: 1.25rem; letter-spacing: -0.01em; margin-bottom: 0.5rem; }
+    .card-desc { font-size: 0.8125rem; color: var(--text-secondary); line-height: 1.75; }
+
+    .card.featured { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr 1fr; }
+    .card.featured .card-img { height: 100%; min-height: 280px; }
+    .card.featured .card-body {
+      padding: 2.5rem;
+      display: flex; flex-direction: column; justify-content: center;
+    }
+    .card.featured .card-title { font-size: 1.75rem; margin-bottom: 1rem; }
+
+    /* ── Contact ── */
+    .contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6rem; align-items: start; }
+    .contact-sub { font-size: 0.9375rem; color: var(--text-secondary); line-height: 1.88; margin-bottom: 2.5rem; }
+
+    .link-list { display: flex; flex-direction: column; }
+    .link-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 0; border-bottom: 1px solid var(--border);
+      text-decoration: none; color: var(--text-primary); font-size: 0.9375rem;
+      transition: color 0.2s;
+    }
+    .link-row:first-child { border-top: 1px solid var(--border); }
+    .link-row:hover { color: var(--accent); }
+    .link-row:hover .link-arrow { transform: translate(3px,-3px); }
+    .link-meta { font-size: 0.8125rem; color: var(--text-secondary); }
+    .link-arrow { color: var(--text-secondary); transition: transform 0.28s cubic-bezier(0.34,1.56,0.64,1); }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 2.5rem;
+    }
+    .footer-inner {
+      max-width: 1100px; margin: 0 auto;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .footer-copy { font-size: 0.75rem; color: var(--text-secondary); }
+
+    /* ── Animation ── */
+    .fade-up {
+      opacity: 0; transform: translateY(22px);
+      transition: opacity 0.75s ease, transform 0.75s cubic-bezier(0.16,1,0.3,1);
+    }
+    .fade-up.visible { opacity: 1; transform: translateY(0); }
+
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      nav { padding: 1.25rem 1.5rem; }
+      .nav-links { gap: 1.25rem; }
+      .hero { padding: 7rem 1.5rem 5rem; }
+      section { padding: 4rem 1.5rem; }
+      .about-grid, .contact-grid { grid-template-columns: 1fr; gap: 3rem; }
+      .work-grid { grid-template-columns: 1fr; }
+      .card.featured { grid-template-columns: 1fr; }
+      .card.featured .card-img { min-height: 220px; }
+      .hero-scroll { display: none; }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Nav -->
+  <nav id="navbar">
+    <a href="#" class="nav-logo">Sudhakar S.</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#work">Work</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" style="max-width:100%;">
+    <div class="hero-glow hero-glow-1"></div>
+    <div class="hero-glow hero-glow-2"></div>
+    <div class="hero-inner">
+      <p class="hero-eyebrow fade-up" style="--d:0.1s">Designer &amp; Developer</p>
+      <h1 class="hero-name fade-up" style="--d:0.22s">
+        Sudhakar<br /><em>Sundaresan</em>
+      </h1>
+      <p class="hero-bio fade-up" style="--d:0.38s">
+        I craft purposeful digital products — from precise interfaces to scalable systems — with a focus on clarity, craft, and thoughtful detail.
+      </p>
+      <a href="#work" class="cta-link fade-up" style="--d:0.52s">
+        View selected work
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </a>
+    </div>
+    <div class="hero-scroll">Scroll</div>
+  </section>
+
+  <!-- About -->
+  <div style="padding: 0 2.5rem;"><div class="divider"></div></div>
+  <section id="about">
+    <p class="sec-label fade-up">About</p>
+    <div class="about-grid">
+      <div>
+        <h2 class="sec-heading fade-up">Building things that <em>matter</em> &amp; last.</h2>
+        <p class="about-text fade-up">
+          I'm a multidisciplinary designer and developer with a passion for building products that are both beautiful and functional. I believe the best digital experiences emerge from the intersection of rigorous thinking and careful aesthetics.
+        </p>
+        <p class="about-text fade-up">
+          When I'm not designing interfaces or writing code, I'm exploring ideas at the edges of technology, creativity, and human experience.
+        </p>
+      </div>
+      <div>
+        <p class="sec-label fade-up" style="margin-bottom:0;">Expertise</p>
+        <ul class="skills-grid" style="list-style:none;">
+          <li class="skill-item fade-up"><span class="skill-dot"></span>UI / UX Design</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Frontend Engineering</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Design Systems</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Product Strategy</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>React &amp; TypeScript</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Interaction Design</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Prototyping</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Brand Identity</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Node.js</li>
+          <li class="skill-item fade-up"><span class="skill-dot"></span>Data Visualization</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- Work -->
+  <div style="padding: 0 2.5rem;"><div class="divider"></div></div>
+  <section id="work">
+    <p class="sec-label fade-up">Selected Work</p>
+    <div class="work-grid">
+
+      <!-- Featured -->
+      <div class="card featured fade-up">
+        <div class="card-img">
+          <img src="https://placehold.co/720x480/1A1715/C8B4A8?text=Featured+Project" alt="Featured project" loading="lazy" />
+          <div class="card-img-overlay"></div>
+          <div class="card-img-tint" style="background:#C14F2B;"></div>
+        </div>
+        <div class="card-body">
+          <p class="card-tag">Product Design · 2024</p>
+          <h3 class="card-title">Atlas — Data Platform</h3>
+          <p class="card-desc">
+            End-to-end redesign of a complex data analytics platform for enterprise users. Reduced task completion time by 38% through simplified navigation and contextual tooling.
+          </p>
+          <a href="#" class="cta-link" style="margin-top:1.5rem;font-size:0.8125rem;">
+            View case study
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </a>
+        </div>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="card fade-up">
+        <div class="card-img">
+          <img src="https://placehold.co/540x360/2D2420/C8B4A8?text=Project+02" alt="Meridian project" loading="lazy" />
+          <div class="card-img-overlay"></div>
+          <div class="card-img-tint" style="background:#8B6E5A;"></div>
+        </div>
+        <div class="card-body">
+          <p class="card-tag">Frontend · 2023</p>
+          <h3 class="card-title">Meridian — Component Library</h3>
+          <p class="card-desc">Built a zero-dependency design system with 60+ accessible components, adopted by four internal product teams.</p>
+        </div>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="card fade-up">
+        <div class="card-img">
+          <img src="https://placehold.co/540x360/232220/C8B4A8?text=Project+03" alt="Sonder project" loading="lazy" />
+          <div class="card-img-overlay"></div>
+          <div class="card-img-tint" style="background:#4A6055;"></div>
+        </div>
+        <div class="card-body">
+          <p class="card-tag">Brand &amp; Web · 2023</p>
+          <h3 class="card-title">Sonder — Brand Identity</h3>
+          <p class="card-desc">Visual identity and marketing site for a wellness startup. Launched in six weeks, achieving 4.2k signups pre-launch.</p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Contact -->
+  <div style="padding: 0 2.5rem;"><div class="divider"></div></div>
+  <section id="contact">
+    <p class="sec-label fade-up">Contact</p>
+    <div class="contact-grid">
+      <div>
+        <h2 class="sec-heading fade-up">Let's make something <em>great</em> together.</h2>
+        <p class="contact-sub fade-up">
+          I'm open to project collaborations, full-time opportunities, and interesting conversations. Don't hesitate to reach out.
+        </p>
+        <a href="mailto:sudhakar.sundaresan@gmail.com" class="cta-link fade-up">
+          sudhakar.sundaresan@gmail.com
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 8H13M13 8L9 4M13 8L9 12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
+      </div>
+      <div class="fade-up">
+        <div class="link-list">
+          <a href="https://linkedin.com/in/sudhakar-sundaresan" target="_blank" rel="noopener" class="link-row">
+            <span>LinkedIn</span>
+            <span style="display:flex;align-items:center;gap:0.75rem;">
+              <span class="link-meta">@sudhakar-sundaresan</span>
+              <svg class="link-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </a>
+          <a href="https://github.com/sudhakar-sundaresan" target="_blank" rel="noopener" class="link-row">
+            <span>GitHub</span>
+            <span style="display:flex;align-items:center;gap:0.75rem;">
+              <span class="link-meta">@sudhakar-sundaresan</span>
+              <svg class="link-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </a>
+          <a href="https://twitter.com/sudhakar_s" target="_blank" rel="noopener" class="link-row">
+            <span>Twitter / X</span>
+            <span style="display:flex;align-items:center;gap:0.75rem;">
+              <span class="link-meta">@sudhakar_s</span>
+              <svg class="link-arrow" width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 11.5L11.5 2.5M11.5 2.5H5.5M11.5 2.5V8.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-copy">© 2026 Sudhakar Sundaresan. All rights reserved.</span>
+      <span class="footer-copy">Designed &amp; built with care.</span>
+    </div>
+  </footer>
+
+  <script>
+    // Nav scroll border
+    const nav = document.getElementById('navbar');
+    window.addEventListener('scroll', () => nav.classList.toggle('scrolled', scrollY > 20), { passive: true });
+
+    // Staggered hero reveals
+    document.querySelectorAll('.hero .fade-up').forEach((el, i) => {
+      setTimeout(() => el.classList.add('visible'), 120 + i * 140);
+    });
+
+    // Scroll-triggered reveals
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); io.unobserve(e.target); } });
+    }, { threshold: 0.12, rootMargin: '0px 0px -36px 0px' });
+
+    document.querySelectorAll('section .fade-up').forEach(el => io.observe(el));
+  </script>
+
+</body>
+</html>
