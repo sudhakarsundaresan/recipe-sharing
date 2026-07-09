@@ -1,3 +1,4 @@
 node_modules/
 temporary screenshots/
 .claude/settings.local.json
+data/
