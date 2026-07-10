@@ -126,9 +126,10 @@ function domainOf(url) {
   catch { return String(url || '').replace(/^https?:\/\//, '').split('/')[0]; }
 }
 
-// Placeholder stand-in for a real extraction pipeline (e.g. an n8n webhook
-// that transcribes a video or scrapes a recipe page). Swap the body of this
-// function for a real call when wiring one up.
+// Placeholder stand-in for a real extraction pipeline for non-YouTube links
+// (website recipe pages). YouTube links go through the real n8n workflow
+// below (extractRecipeFromYouTube); there's no equivalent for arbitrary web
+// pages yet, so those still fall back to this mock.
 function mockExtractRecipe(mode) {
   return {
     ingredients: [
@@ -147,7 +148,76 @@ function mockExtractRecipe(mode) {
   };
 }
 
-app.post('/api/recipes', requireAuth, (req, res) => {
+const N8N_YOUTUBE_WEBHOOK_URL = process.env.N8N_YOUTUBE_WEBHOOK_URL
+  || 'https://ssudha17.app.n8n.cloud/webhook/youtube-transcript';
+const N8N_TIMEOUT_MS = 90_000;
+
+function formatIngredient(ing) {
+  const parts = [ing.quantity, ing.unit, ing.item].map((s) => String(s ?? '').trim()).filter(Boolean);
+  let text = parts.join(' ');
+  const notes = String(ing.notes ?? '').trim();
+  if (notes) text += text ? ` (${notes})` : notes;
+  return text.trim();
+}
+
+// Calls the n8n workflow that transcribes a YouTube video and asks an AI
+// agent to pull structured recipe data out of it. Throws with a
+// user-facing message on any failure (network, timeout, not-a-recipe, etc).
+async function extractRecipeFromYouTube(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), N8N_TIMEOUT_MS);
+  let res;
+  try {
+    res = await fetch(N8N_YOUTUBE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+      signal: controller.signal,
+    });
+  } catch (err) {
+    if (err.name === 'AbortError') {
+      throw new Error('That took too long to process. Please try again.');
+    }
+    throw new Error('Could not reach the recipe extraction service. Please try again.');
+  } finally {
+    clearTimeout(timer);
+  }
+
+  let data;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error('The recipe extraction service returned an unexpected response.');
+  }
+
+  if (!res.ok || !data.success) {
+    throw new Error(data.message || 'Could not extract a recipe from that video.');
+  }
+  if (!data.isRecipeVideo) {
+    throw new Error(data.message || "That doesn't look like a recipe video.");
+  }
+
+  const r = data.recipe || {};
+  const ingredients = (Array.isArray(r.ingredients) ? r.ingredients : [])
+    .map(formatIngredient)
+    .filter(Boolean);
+  const steps = (Array.isArray(r.procedure) ? r.procedure : [])
+    .slice()
+    .sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0))
+    .map((s) => String(s.instruction || '').trim())
+    .filter(Boolean);
+
+  return {
+    title: String(r.name || data.source?.title || '').trim(),
+    story: String(r.description || '').trim(),
+    cookTime: String(r.cookTime || r.totalTime || r.prepTime || '').trim(),
+    servings: String(r.servings || '').trim(),
+    ingredients,
+    steps,
+  };
+}
+
+app.post('/api/recipes', requireAuth, async (req, res) => {
   const b = req.body || {};
   const mode = b.sourceType === 'youtube' || b.sourceType === 'link' ? b.sourceType : 'own';
   const title = String(b.title || '').trim();
@@ -181,10 +251,33 @@ app.post('/api/recipes', requireAuth, (req, res) => {
   if (mode === 'youtube' && !extractYouTubeId(sourceUrl)) {
     return res.status(400).json({ error: "That doesn't look like a valid YouTube link." });
   }
+
+  if (mode === 'youtube') {
+    let extracted;
+    try {
+      extracted = await extractRecipeFromYouTube(sourceUrl);
+    } catch (err) {
+      return res.status(422).json({ error: err.message });
+    }
+    if (extracted.ingredients.length === 0 || extracted.steps.length === 0) {
+      return res.status(422).json({ error: "Couldn't find clear ingredients or steps in that video. Try a different one, or write the recipe yourself." });
+    }
+    const id = createRecipe({
+      userId: req.session.userId, title,
+      story: String(b.story || '').trim() || extracted.story || 'Shared from a YouTube video and extracted by our recipe assistant.',
+      cookTime: extracted.cookTime || '—',
+      servings: extracted.servings || '—',
+      difficulty: 'Medium',
+      diet, sourceType: 'youtube', sourceUrl, heroKind, aiVariant,
+      ingredients: extracted.ingredients, steps: extracted.steps,
+    });
+    return res.json({ id });
+  }
+
   const mock = mockExtractRecipe(mode);
   const id = createRecipe({
     userId: req.session.userId, title,
-    story: String(b.story || '').trim() || `Shared from ${mode === 'youtube' ? 'a YouTube video' : 'the web'} and auto-extracted by our recipe assistant.`,
+    story: String(b.story || '').trim() || 'Shared from the web and auto-extracted by our recipe assistant.',
     cookTime: mock.cookTime, servings: mock.servings, difficulty: mock.difficulty,
     diet, sourceType: mode, sourceUrl, heroKind, aiVariant,
     ingredients: mock.ingredients, steps: mock.steps,

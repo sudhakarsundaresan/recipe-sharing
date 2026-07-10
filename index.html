@@ -116,7 +116,7 @@
 
   const app = document.getElementById('app');
   let toastTimer = null;
-  let extractTimer = null, extractDoneTimer = null;
+  let extractTimer = null;
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -410,7 +410,7 @@
           </div>
           <a href="${esc(r.sourceUrl)}" target="_blank" rel="noopener noreferrer" class="btn btn-accent" style="text-decoration:none;white-space:nowrap;">Open recipe ↗</a>
         </div>` : ''}
-      ${isOwn ? `
+      ${isOwn || isYoutube ? `
         <div style="display:grid;grid-template-columns:1fr 1.4fr;gap:48px;margin-bottom:44px;" class="two-col">
           <div>
             <div class="serif" style="font-size:20px;font-weight:600;margin-bottom:14px;">Ingredients</div>
@@ -543,7 +543,7 @@
 
   function renderExtracting() {
     const subtext = state.extractMode === 'youtube'
-      ? 'Watching the video and pulling out ingredients and steps…'
+      ? 'Transcribing the video and asking our recipe assistant to pull out ingredients and steps — this can take up to a minute…'
       : 'Reading the page and pulling out ingredients and steps…';
     return `
     <div class="overlay-backdrop">
@@ -641,31 +641,39 @@
     syncFormArraysFromDom('step');
   }
 
-  function startExtraction(mode, draftSnapshot) {
+  // YouTube extraction runs a real transcription + AI pipeline server-side
+  // and can take up to ~60s, so the progress bar ramps slowly over that
+  // window (never reaching 100 on its own) while the actual request is in
+  // flight, then snaps to 100 the moment the real response comes back.
+  // Link (website) extraction is still mocked and fast, so it keeps a short
+  // fixed ramp.
+  async function startExtraction(mode, draftSnapshot) {
     clearInterval(extractTimer);
-    clearTimeout(extractDoneTimer);
+    const startedAt = Date.now();
+    const rampSeconds = mode === 'youtube' ? 55 : 2;
     setState({ extracting: true, extractProgress: 6, extractMode: mode });
     extractTimer = setInterval(() => {
-      state.extractProgress = Math.min(92, state.extractProgress + Math.random() * 9 + 3);
+      const elapsed = (Date.now() - startedAt) / 1000;
+      const target = 6 + (90 - 6) * Math.min(1, elapsed / rampSeconds);
+      state.extractProgress = Math.max(state.extractProgress, target);
       render();
-    }, 220);
-    extractDoneTimer = setTimeout(() => finishExtraction(mode, draftSnapshot), 2200);
-  }
+    }, 300);
 
-  async function finishExtraction(mode, draftSnapshot) {
-    clearInterval(extractTimer);
-    state.extractProgress = 100;
-    render();
     try {
       const data = await api('/recipes', { method: 'POST', body: {
         title: draftSnapshot.title, story: draftSnapshot.story, diet: draftSnapshot.diet,
         sourceType: mode, sourceUrl: draftSnapshot.sourceUrl,
         heroKind: draftSnapshot.heroKind, aiVariant: draftSnapshot.aiVariant,
       } });
+      clearInterval(extractTimer);
+      state.extractProgress = 100;
+      render();
+      await new Promise((r) => setTimeout(r, 300));
       setState({ extracting: false, extractProgress: 0 });
       showToast(mode === 'youtube' ? 'Recipe extracted from the video and published!' : 'Recipe extracted from the page and published!');
       await openRecipe(data.id);
     } catch (err) {
+      clearInterval(extractTimer);
       setState({ extracting: false, extractProgress: 0, screen: 'upload', draftError: err.message });
     }
   }
