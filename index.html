@@ -14,18 +14,67 @@
     --ink: #362B1F;
     --muted: #8A7A62;
     --body-text: #4A3E2C;
+    --story-text: #6B5B3A;
+    --placeholder: #B3A588;
+    --on-color: #fff;
     --card-bg: #FFFDF7;
     --input-bg: #FBF8F0;
     --panel-bg: #F1EAD9;
-    --border: rgba(54,43,31,0.08);
-    --border-strong: rgba(54,43,31,0.15);
     --star-empty: #E3DAC4;
     --error: #B4552F;
+    --ink-rgb: 54,43,31;
+    --primary-rgb: 75,107,79;
+    --accent-rgb: 193,105,79;
+    --error-rgb: 180,85,47;
+    --border: rgba(var(--ink-rgb),0.08);
+    --border-strong: rgba(var(--ink-rgb),0.15);
   }
+
+  /* Deuteranopia (red-green color blindness, most common form) */
+  :root[data-theme="deuteranopia"] {
+    --page-bg: #F0F4F8; --primary: #2B5F8A; --accent: #C7671A; --ink: #1E2A33;
+    --muted: #6B7B87; --body-text: #2E3D47; --story-text: #4A5A66; --placeholder: #9AAAB5;
+    --on-color: #fff; --card-bg: #FFFFFF; --input-bg: #F7FAFC; --panel-bg: #E4ECF2;
+    --star-empty: #D6E0E8; --error: #C1440E;
+    --ink-rgb: 30,42,51; --primary-rgb: 43,95,138; --accent-rgb: 199,103,26; --error-rgb: 193,68,14;
+  }
+  /* Protanopia (red-weak color blindness) */
+  :root[data-theme="protanopia"] {
+    --page-bg: #F5F3EC; --primary: #1F4E79; --accent: #B8860B; --ink: #24272B;
+    --muted: #767268; --body-text: #33302A; --story-text: #5A5348; --placeholder: #A39C8A;
+    --on-color: #fff; --card-bg: #FFFFFF; --input-bg: #FAF8F2; --panel-bg: #EDE9DD;
+    --star-empty: #DFD9C8; --error: #A6531C;
+    --ink-rgb: 36,39,43; --primary-rgb: 31,78,121; --accent-rgb: 184,134,11; --error-rgb: 166,83,28;
+  }
+  /* Tritanopia (blue-yellow color blindness, rare) */
+  :root[data-theme="tritanopia"] {
+    --page-bg: #F6F1F3; --primary: #7A2048; --accent: #2F7D4F; --ink: #2A1620;
+    --muted: #8A7480; --body-text: #3D2530; --story-text: #6B4A58; --placeholder: #B09AA3;
+    --on-color: #fff; --card-bg: #FFFFFF; --input-bg: #FBF7F8; --panel-bg: #EFE0E6;
+    --star-empty: #E3CFD8; --error: #B4304F;
+    --ink-rgb: 42,22,32; --primary-rgb: 122,32,72; --accent-rgb: 47,125,79; --error-rgb: 180,48,79;
+  }
+  /* High contrast, dark — for low vision / light sensitivity */
+  :root[data-theme="contrast-dark"] {
+    --page-bg: #0E0E10; --primary: #4FD1C5; --accent: #FFC857; --ink: #FFFFFF;
+    --muted: #A8A8AD; --body-text: #E6E6E9; --story-text: #C7C7CC; --placeholder: #6E6E73;
+    --on-color: #0E0E10; --card-bg: #1A1A1D; --input-bg: #222226; --panel-bg: #242428;
+    --star-empty: #3A3A3F; --error: #FF6B6B;
+    --ink-rgb: 255,255,255; --primary-rgb: 79,209,197; --accent-rgb: 255,200,87; --error-rgb: 255,107,107;
+  }
+  /* High contrast, light — maximum contrast without a dark background */
+  :root[data-theme="contrast-light"] {
+    --page-bg: #FFFFFF; --primary: #0B3D91; --accent: #C0392B; --ink: #000000;
+    --muted: #4A4A4A; --body-text: #1A1A1A; --story-text: #333333; --placeholder: #6E6E6E;
+    --on-color: #fff; --card-bg: #FFFFFF; --input-bg: #F5F5F5; --panel-bg: #EAEAEA;
+    --star-empty: #CCCCCC; --error: #B00020;
+    --ink-rgb: 0,0,0; --primary-rgb: 11,61,145; --accent-rgb: 192,57,43; --error-rgb: 176,0,32;
+  }
+
   * { box-sizing: border-box; }
   body { margin:0; font-family:'Work Sans',sans-serif; background:var(--page-bg); color:var(--ink); }
   input, textarea, select, button { font-family:'Work Sans',sans-serif; }
-  ::placeholder { color:#B3A588; }
+  ::placeholder { color:var(--placeholder); }
   a { color:inherit; }
   .serif { font-family:'Spectral',serif; }
   @keyframes toastIn { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
@@ -42,14 +91,14 @@
   .btn { border:none; border-radius:20px; font-size:14px; font-weight:600; cursor:pointer; padding:10px 18px; transition: transform .15s ease, box-shadow .15s ease; }
   .btn:active { transform: scale(0.97); }
   .btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-  .btn-accent { background:var(--accent); color:#fff; }
-  .btn-accent:hover { box-shadow: 0 8px 20px rgba(193,105,79,0.35); }
-  .btn-primary { background:var(--primary); color:#fff; }
-  .btn-primary:hover { box-shadow: 0 8px 20px rgba(75,107,79,0.3); }
-  .btn-outline { background:#fff; border:1px solid var(--border-strong); color:var(--ink); }
-  .btn-outline:hover { background:#fbf8f0; }
+  .btn-accent { background:var(--accent); color:var(--on-color); }
+  .btn-accent:hover { box-shadow: 0 8px 20px rgba(var(--accent-rgb),0.35); }
+  .btn-primary { background:var(--primary); color:var(--on-color); }
+  .btn-primary:hover { box-shadow: 0 8px 20px rgba(var(--primary-rgb),0.3); }
+  .btn-outline { background:var(--card-bg); border:1px solid var(--border-strong); color:var(--ink); }
+  .btn-outline:hover { background:var(--input-bg); }
 
-  .card { background:var(--card-bg); border-radius:16px; border:1px solid var(--border); box-shadow:0 6px 20px rgba(54,43,31,0.06); }
+  .card { background:var(--card-bg); border-radius:16px; border:1px solid var(--border); box-shadow:0 6px 20px rgba(var(--ink-rgb),0.06); }
   .chip { background:var(--panel-bg); border-radius:20px; padding:7px 14px; font-size:12.5px; color:var(--body-text); display:inline-block; }
 
   #app { min-height:100vh; }
@@ -60,28 +109,46 @@
   .header .search-wrap { flex:1; max-width:420px; position:relative; display:flex; align-items:center; gap:8px; }
 
   .recipe-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:28px; }
-  .recipe-card { background:var(--card-bg); border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 6px 20px rgba(54,43,31,0.06); cursor:pointer; display:flex; flex-direction:column; transition:transform .18s ease, box-shadow .18s ease; }
-  .recipe-card:hover { transform:translateY(-5px); box-shadow:0 16px 34px rgba(54,43,31,0.14); }
+  .recipe-card { background:var(--card-bg); border-radius:16px; overflow:hidden; border:1px solid var(--border); box-shadow:0 6px 20px rgba(var(--ink-rgb),0.06); cursor:pointer; display:flex; flex-direction:column; transition:transform .18s ease, box-shadow .18s ease; }
+  .recipe-card:hover { transform:translateY(-5px); box-shadow:0 16px 34px rgba(var(--ink-rgb),0.14); }
   .recipe-card:focus-visible { outline:2px solid var(--primary); outline-offset:2px; }
   .recipe-cover { width:100%; aspect-ratio:4/3; position:relative; background-size:cover; background-position:center; }
   .badge { position:absolute; top:10px; padding:5px 11px; border-radius:14px; font-size:11.5px; font-weight:600; }
   .badge-diet { left:10px; background:rgba(255,253,247,0.92); color:var(--primary); }
-  .badge-source { right:10px; background:rgba(54,43,31,0.75); color:#fff; }
+  .badge-source { right:10px; background:rgba(var(--ink-rgb),0.75); color:var(--on-color); }
   .stars { display:inline-flex; align-items:center; gap:3px; }
   .stars svg { display:block; }
 
-  .toast { position:fixed; bottom:28px; right:28px; max-width:360px; background:var(--ink); color:#fff; padding:14px 22px; border-radius:12px; font-size:14px; line-height:1.5; box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:toastIn .2s ease; z-index:50; }
-  .overlay-backdrop { position:fixed; inset:0; background:rgba(54,43,31,0.45); display:flex; align-items:center; justify-content:center; z-index:100; }
+  .toast { position:fixed; bottom:28px; right:28px; max-width:360px; background:var(--ink); color:var(--on-color); padding:14px 22px; border-radius:12px; font-size:14px; line-height:1.5; box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:toastIn .2s ease; z-index:50; }
+  .overlay-backdrop { position:fixed; inset:0; background:rgba(0,0,0,0.45); display:flex; align-items:center; justify-content:center; z-index:100; }
 
-  .filter-panel { position:absolute; top:46px; left:0; width:300px; background:var(--card-bg); border-radius:14px; box-shadow:0 16px 40px rgba(54,43,31,0.18); border:1px solid var(--border); padding:18px; z-index:30; display:flex; flex-direction:column; gap:14px; }
+  .filter-panel { position:absolute; top:46px; left:0; width:300px; background:var(--card-bg); border-radius:14px; box-shadow:0 16px 40px rgba(var(--ink-rgb),0.18); border:1px solid var(--border); padding:18px; z-index:30; display:flex; flex-direction:column; gap:14px; }
   .filter-check { display:flex; align-items:center; gap:10px; font-size:13.5px; cursor:pointer; }
 
-  .avatar { border-radius:50%; background:var(--primary); color:#fff; display:flex; align-items:center; justify-content:center; font-weight:600; flex:none; }
+  .avatar { border-radius:50%; background:var(--primary); color:var(--on-color); display:flex; align-items:center; justify-content:center; font-weight:600; flex:none; }
+
+  .theme-picker {
+    position:fixed; bottom:16px; left:50%; transform:translateX(-50%);
+    background:var(--card-bg); border:1px solid var(--border-strong); border-radius:16px;
+    padding:8px; box-shadow:0 10px 30px rgba(0,0,0,0.18);
+    display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:1fr; gap:6px;
+    z-index:60;
+  }
+  .theme-swatch {
+    width:20px; height:20px; border-radius:50%; padding:0; cursor:pointer;
+    border:2px solid rgba(0,0,0,0.15); box-shadow:0 1px 3px rgba(0,0,0,0.2);
+    transition: transform .12s ease, border-color .12s ease;
+  }
+  .theme-swatch:hover { transform: scale(1.15); }
+  .theme-swatch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+  .theme-swatch.active { border-color: var(--ink); border-width: 3px; }
 
   @media (max-width: 860px) {
     .two-col { grid-template-columns: 1fr !important; }
     .four-col { grid-template-columns: 1fr 1fr !important; }
     .header { padding:12px 16px; flex-wrap:wrap; }
+    .theme-picker { bottom:8px; padding:6px; gap:5px; }
+    .theme-swatch { width:17px; height:17px; }
   }
 </style>
 </head>
@@ -98,8 +165,32 @@
     'linear-gradient(135deg, #f6e2b3, #d7ecec)',
   ];
 
+  // Color themes for the picker — the first (original) is the default look;
+  // the rest re-derive the whole palette for different forms of color
+  // blindness, plus two general high-contrast options. primary/accent here
+  // are only used to paint the small swatch icons — the actual palette
+  // swap happens via the matching :root[data-theme="..."] CSS blocks.
+  const THEMES = [
+    { key: 'original', name: 'Original', primary: '#4B6B4F', accent: '#C1694F' },
+    { key: 'deuteranopia', name: 'Deuteranopia-friendly', primary: '#2B5F8A', accent: '#C7671A' },
+    { key: 'protanopia', name: 'Protanopia-friendly', primary: '#1F4E79', accent: '#B8860B' },
+    { key: 'tritanopia', name: 'Tritanopia-friendly', primary: '#7A2048', accent: '#2F7D4F' },
+    { key: 'contrast-dark', name: 'High Contrast Dark', primary: '#4FD1C5', accent: '#FFC857' },
+    { key: 'contrast-light', name: 'High Contrast Light', primary: '#0B3D91', accent: '#C0392B' },
+  ];
+  const THEME_STORAGE_KEY = 'simmer-theme';
+
+  function applyTheme(key) {
+    if (key === 'original') document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', key);
+    try { localStorage.setItem(THEME_STORAGE_KEY, key); } catch (e) { /* ignore */ }
+  }
+
   const state = {
     screen: 'loading',
+    theme: (function () {
+      try { return localStorage.getItem(THEME_STORAGE_KEY) || 'original'; } catch (e) { return 'original'; }
+    })(),
     authMode: 'login',
     authError: '',
     currentUser: null,
@@ -114,6 +205,8 @@
     extracting: false, extractProgress: 0, extractMode: 'youtube',
     myRecipes: [],
   };
+
+  applyTheme(state.theme);
 
   const app = document.getElementById('app');
   let toastTimer = null;
@@ -196,7 +289,7 @@
         <div style="padding:18px 20px 20px;display:flex;flex-direction:column;gap:8px;">
           <div class="serif" style="font-size:19px;font-weight:600;line-height:1.25;">${esc(r.title)}</div>
           <div style="font-size:12.5px;color:var(--muted);">${opts.showAuthor === false ? '' : 'by ' + esc(r.author) + ' · '}${esc(r.cookTime)} min · ${esc(r.difficulty)}</div>
-          ${opts.showStory !== false ? `<div style="font-size:13px;color:#6B5B3A;font-style:italic;line-height:1.4;">${story}</div>` : ''}
+          ${opts.showStory !== false ? `<div style="font-size:13px;color:var(--story-text);font-style:italic;line-height:1.4;">${story}</div>` : ''}
           <div style="display:flex;align-items:center;gap:4px;margin-top:2px;">
             ${starsRow(r.avg, 14, false)}
             <span style="font-size:12.5px;color:var(--muted);margin-left:4px;">${r.avg ? r.avg.toFixed(1) : '—'} (${r.ratingCount})</span>
@@ -207,10 +300,16 @@
 
   // ---------- render ----------
 
+  function renderThemePicker() {
+    return `<div class="theme-picker" role="group" aria-label="Color theme">
+      ${THEMES.map((t) => `<button type="button" class="theme-swatch${state.theme === t.key ? ' active' : ''}" data-action="set-theme" data-theme="${t.key}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" aria-pressed="${state.theme === t.key}" style="background:linear-gradient(135deg, ${t.primary} 50%, ${t.accent} 50%);"></button>`).join('')}
+    </div>`;
+  }
+
   function render() {
     if (state.screen === 'loading') { app.innerHTML = ''; return; }
-    if (state.screen === 'login') { app.innerHTML = renderAuth(); return; }
-    if (state.screen === 'welcome') { app.innerHTML = renderWelcome(); return; }
+    if (state.screen === 'login') { app.innerHTML = renderAuth() + renderThemePicker(); return; }
+    if (state.screen === 'welcome') { app.innerHTML = renderWelcome() + renderThemePicker(); return; }
 
     let content = '';
     if (state.extracting) content = renderExtracting();
@@ -230,14 +329,14 @@
            </div>`
         : `<div class="toast">${esc(state.toast)}</div>`;
     }
-    app.innerHTML = renderHeader() + content + toastHtml;
+    app.innerHTML = renderHeader() + content + toastHtml + renderThemePicker();
   }
 
   function renderAuth() {
     const isSignup = state.authMode === 'signup';
     return `
     <div class="center-screen" style="background:radial-gradient(ellipse at 30% 20%,rgba(255,255,255,0.6),transparent 60%),var(--page-bg);">
-      <div style="width:100%;max-width:400px;background:var(--card-bg);border-radius:20px;box-shadow:0 20px 60px rgba(54,43,31,0.14);padding:40px 36px;border:1px solid var(--border);">
+      <div style="width:100%;max-width:400px;background:var(--card-bg);border-radius:20px;box-shadow:0 20px 60px rgba(var(--ink-rgb),0.14);padding:40px 36px;border:1px solid var(--border);">
         <div class="logo-row" style="justify-content:center;margin-bottom:6px;">${logoSvg(30)}<div class="serif" style="font-size:26px;font-weight:600;">Simmer</div></div>
         <div style="text-align:center;color:var(--muted);font-size:14px;margin-bottom:28px;">Recipes worth passing down</div>
         <div style="display:flex;gap:6px;background:var(--panel-bg);border-radius:12px;padding:4px;margin-bottom:24px;">
@@ -292,8 +391,8 @@
       <div class="logo-row" style="cursor:pointer;" data-action="go-browse">${logoSvg(22)}<div class="serif" style="font-size:20px;font-weight:600;">Simmer</div></div>
       <div class="search-wrap">
         <input class="field" style="border-radius:20px;background:var(--panel-bg);" data-live="query" placeholder="Search recipes..." value="${esc(state.query)}"/>
-        <button data-action="toggle-filter-panel" style="position:relative;width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--border-strong);background:${filterOn ? 'var(--primary)' : '#fff'};cursor:pointer;display:flex;align-items:center;justify-content:center;">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${filterOn ? '#fff' : 'var(--body-text)'}" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M8 12h8M11 18h2"/></svg>
+        <button data-action="toggle-filter-panel" style="position:relative;width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--border-strong);background:${filterOn ? 'var(--primary)' : 'var(--card-bg)'};cursor:pointer;display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="${filterOn ? 'var(--on-color)' : 'var(--body-text)'}" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M8 12h8M11 18h2"/></svg>
           ${hasActiveFilters ? `<div style="position:absolute;top:-2px;right:-2px;width:9px;height:9px;border-radius:50%;background:var(--accent);"></div>` : ''}
         </button>
         ${state.filterPanelOpen ? renderFilterPanel(hasActiveFilters) : ''}
@@ -542,7 +641,7 @@
             <button type="button" data-action="add-step" class="btn" style="margin-top:10px;border:1px dashed var(--border-strong);background:transparent;color:var(--muted);">+ Add step</button>
           </div>`}
         ${state.draftError ? `
-          <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(180,85,47,0.08);border:1px solid rgba(180,85,47,0.35);border-radius:12px;padding:14px 16px;">
+          <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(var(--error-rgb),0.08);border:1px solid rgba(var(--error-rgb),0.35);border-radius:12px;padding:14px 16px;">
             <div style="font-size:19px;line-height:1;flex:none;">⚠️</div>
             <div style="font-size:14px;font-weight:600;color:var(--error);line-height:1.5;">${esc(state.draftError)}</div>
           </div>` : ''}
@@ -555,7 +654,7 @@
     const field = isTextarea
       ? `<textarea class="field" data-row="${kind}" data-index="${i}" placeholder="${placeholder}" style="flex:1;resize:none;height:44px;">${esc(value)}</textarea>`
       : `<input class="field" data-row="${kind}" data-index="${i}" placeholder="${placeholder}" value="${esc(value)}"/>`;
-    return `<div style="display:flex;gap:8px;">${field}<button type="button" data-action="remove-${kind}" data-index="${i}" style="width:38px;border:1px solid var(--border-strong);background:#fff;border-radius:10px;cursor:pointer;color:var(--muted);">×</button></div>`;
+    return `<div style="display:flex;gap:8px;">${field}<button type="button" data-action="remove-${kind}" data-index="${i}" style="width:38px;border:1px solid var(--border-strong);background:var(--card-bg);border-radius:10px;cursor:pointer;color:var(--muted);">×</button></div>`;
   }
 
   function renderExtracting() {
@@ -706,10 +805,17 @@
       'set-mode-own', 'set-mode-youtube', 'set-mode-link',
       'generate-ai', 'regenerate-ai', 'use-own-photo',
       'add-ingredient', 'remove-ingredient', 'add-step', 'remove-step',
+      'set-theme',
     ]);
     try {
       if (state.screen === 'upload' && UPLOAD_FORM_ACTIONS.has(action)) syncDraftFromForm();
       switch (action) {
+        case 'set-theme': {
+          const key = el.getAttribute('data-theme');
+          applyTheme(key);
+          setState({ theme: key });
+          break;
+        }
         case 'set-login-mode': setState({ authMode: 'login', authError: '' }); break;
         case 'set-signup-mode': setState({ authMode: 'signup', authError: '' }); break;
         case 'enter-app': await goBrowse(); break;
