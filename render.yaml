@@ -1,0 +1,22 @@
+databases:
+  - name: simmer-db
+    plan: free
+    databaseName: simmer
+    user: simmer
+
+services:
+  - type: web
+    name: simmer
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: simmer-db
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: N8N_YOUTUBE_WEBHOOK_URL
+        value: https://ssudha17.app.n8n.cloud/webhook/youtube-transcript

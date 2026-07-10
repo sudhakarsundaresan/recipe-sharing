@@ -10,15 +10,22 @@ import {
 } from './db.js';
 import { seed } from './seed-data.js';
 
-seed();
+await seed();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT ? Number(process.env.PORT) : 4200;
 const app = express();
 
+// Wraps an async route handler so a rejected promise (e.g. a lost DB
+// connection) is forwarded to Express's error handler instead of hanging
+// the request or crashing the process.
+function asyncHandler(fn) {
+  return (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+}
+
 app.use(express.json());
 app.use(session({
-  secret: 'simmer-local-dev-secret',
+  secret: process.env.SESSION_SECRET || 'simmer-local-dev-secret',
   resave: false,
   saveUninitialized: false,
   cookie: { httpOnly: true, sameSite: 'lax', maxAge: 30 * 24 * 60 * 60 * 1000 },
@@ -59,7 +66,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 // ---- auth ----
 
-app.post('/api/register', (req, res) => {
+app.post('/api/register', asyncHandler(async (req, res) => {
   const name = String(req.body.name || '').trim();
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
@@ -67,55 +74,55 @@ app.post('/api/register', (req, res) => {
   if (!name) return res.status(400).json({ error: 'Please tell us your name.' });
   if (!EMAIL_RE.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
   if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-  if (getUserByEmail(email)) return res.status(409).json({ error: 'An account with that email already exists.' });
+  if (await getUserByEmail(email)) return res.status(409).json({ error: 'An account with that email already exists.' });
 
-  const user = createUser({ name, email, passwordHash: bcrypt.hashSync(password, 10) });
+  const user = await createUser({ name, email, passwordHash: bcrypt.hashSync(password, 10) });
   req.session.userId = user.id;
   res.json({ user: publicUser(user) });
-});
+}));
 
-app.post('/api/login', (req, res) => {
+app.post('/api/login', asyncHandler(async (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
   const password = String(req.body.password || '');
   if (!EMAIL_RE.test(email) || !password) {
     return res.status(400).json({ error: 'Please fill in email and password.' });
   }
-  const user = getUserByEmail(email);
+  const user = await getUserByEmail(email);
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     return res.status(401).json({ error: 'Incorrect email or password.' });
   }
   req.session.userId = user.id;
   res.json({ user: publicUser(user) });
-});
+}));
 
 app.post('/api/logout', (req, res) => {
   req.session.destroy(() => res.json({ ok: true }));
 });
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', asyncHandler(async (req, res) => {
   if (!req.session.userId) return res.json({ user: null });
-  const user = getUserById(req.session.userId);
+  const user = await getUserById(req.session.userId);
   if (!user) return res.json({ user: null });
-  res.json({ user: publicUser(user), recipeCount: countRecipesByUser(user.id) });
-});
+  res.json({ user: publicUser(user), recipeCount: await countRecipesByUser(user.id) });
+}));
 
 // ---- recipes ----
 
-app.get('/api/recipes', (req, res) => {
+app.get('/api/recipes', asyncHandler(async (req, res) => {
   const { q, vegan, vegetarian, ingredient, sort } = req.query;
-  const rows = listRecipes({
+  const rows = await listRecipes({
     q, ingredient,
     vegan: vegan === '1' || vegan === 'true',
     vegetarian: vegetarian === '1' || vegetarian === 'true',
     sortRecent: sort === 'recent',
   });
   res.json({ recipes: rows.map(cardShape) });
-});
+}));
 
-app.get('/api/me/recipes', requireAuth, (req, res) => {
-  const rows = listRecipesByUser(req.session.userId);
+app.get('/api/me/recipes', requireAuth, asyncHandler(async (req, res) => {
+  const rows = await listRecipesByUser(req.session.userId);
   res.json({ recipes: rows.map(cardShape) });
-});
+}));
 
 function extractYouTubeId(url) {
   const m = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
@@ -217,7 +224,7 @@ async function extractRecipeFromYouTube(url) {
   };
 }
 
-app.post('/api/recipes', requireAuth, async (req, res) => {
+app.post('/api/recipes', requireAuth, asyncHandler(async (req, res) => {
   const b = req.body || {};
   const mode = b.sourceType === 'youtube' || b.sourceType === 'link' ? b.sourceType : 'own';
   const title = String(b.title || '').trim();
@@ -233,7 +240,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
     if (ingredients.length === 0 || steps.length === 0) {
       return res.status(400).json({ error: 'Please add a title, at least one ingredient and one step.' });
     }
-    const id = createRecipe({
+    const id = await createRecipe({
       userId: req.session.userId, title,
       story: String(b.story || '').trim() || 'A recipe worth sharing.',
       cookTime: String(b.cookTime || '').trim() || '—',
@@ -262,7 +269,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
     if (extracted.ingredients.length === 0 || extracted.steps.length === 0) {
       return res.status(422).json({ error: "Couldn't find clear ingredients or steps in that video. Try a different one, or write the recipe yourself." });
     }
-    const id = createRecipe({
+    const id = await createRecipe({
       userId: req.session.userId, title,
       story: String(b.story || '').trim() || extracted.story || 'Shared from a YouTube video and extracted by our recipe assistant.',
       cookTime: extracted.cookTime || '—',
@@ -275,7 +282,7 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
   }
 
   const mock = mockExtractRecipe(mode);
-  const id = createRecipe({
+  const id = await createRecipe({
     userId: req.session.userId, title,
     story: String(b.story || '').trim() || 'Shared from the web and auto-extracted by our recipe assistant.',
     cookTime: mock.cookTime, servings: mock.servings, difficulty: mock.difficulty,
@@ -283,10 +290,10 @@ app.post('/api/recipes', requireAuth, async (req, res) => {
     ingredients: mock.ingredients, steps: mock.steps,
   });
   res.json({ id, domain: domainOf(sourceUrl) });
-});
+}));
 
-app.get('/api/recipes/:id', (req, res) => {
-  const recipe = getRecipeById(Number(req.params.id), req.session.userId || null);
+app.get('/api/recipes/:id', asyncHandler(async (req, res) => {
+  const recipe = await getRecipeById(Number(req.params.id), req.session.userId || null);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found.' });
   const videoId = recipe.source_type === 'youtube' ? extractYouTubeId(recipe.source_url) : null;
   res.json({
@@ -300,29 +307,37 @@ app.get('/api/recipes/:id', (req, res) => {
       videoEmbedUrl: videoId ? `https://www.youtube.com/embed/${videoId}` : '',
     },
   });
-});
+}));
 
-app.put('/api/recipes/:id/rating', requireAuth, (req, res) => {
+app.put('/api/recipes/:id/rating', requireAuth, asyncHandler(async (req, res) => {
   const stars = Number(req.body.stars);
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
     return res.status(400).json({ error: 'Rating must be an integer from 1 to 5.' });
   }
-  const recipe = getRecipeById(Number(req.params.id), null);
+  const recipe = await getRecipeById(Number(req.params.id), null);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found.' });
-  const agg = upsertRating({ recipeId: recipe.id, userId: req.session.userId, stars });
+  const agg = await upsertRating({ recipeId: recipe.id, userId: req.session.userId, stars });
   res.json({ avg: Math.round(Number(agg.avg_stars) * 10) / 10, ratingCount: agg.rating_count, myRating: stars });
-});
+}));
 
-app.post('/api/recipes/:id/comments', requireAuth, (req, res) => {
+app.post('/api/recipes/:id/comments', requireAuth, asyncHandler(async (req, res) => {
   const text = String(req.body.text || '').trim();
   if (!text) return res.status(400).json({ error: 'Comment cannot be empty.' });
-  const recipe = getRecipeById(Number(req.params.id), null);
+  const recipe = await getRecipeById(Number(req.params.id), null);
   if (!recipe) return res.status(404).json({ error: 'Recipe not found.' });
-  const comment = addComment({ recipeId: recipe.id, userId: req.session.userId, text });
+  const comment = await addComment({ recipeId: recipe.id, userId: req.session.userId, text });
   res.json({ comment });
-});
+}));
 
 app.use(express.static(__dirname));
+
+// Catches errors forwarded by asyncHandler (e.g. a lost DB connection).
+// Doesn't leak internal error details to the client.
+app.use((err, req, res, next) => {
+  console.error(err);
+  if (res.headersSent) return next(err);
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
+});
 
 app.listen(PORT, () => {
   console.log(`Server running at http://localhost:${PORT}`);

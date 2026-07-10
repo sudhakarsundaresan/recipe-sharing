@@ -130,9 +130,9 @@ const RECIPES = [
   },
 ];
 
-function ensureUser(name, passwordHash) {
+async function ensureUser(name, passwordHash) {
   const email = slugEmail(name);
-  const existing = getUserByEmail(email);
+  const existing = await getUserByEmail(email);
   if (existing) return existing;
   return createUser({ name, email, passwordHash });
 }
@@ -148,19 +148,20 @@ function distributeStars(sum, count) {
   return stars;
 }
 
-export function seed() {
-  if (!isEmpty()) return;
+export async function seed() {
+  if (!(await isEmpty())) return;
 
   const passwordHash = bcrypt.hashSync(SEED_PASSWORD, 10);
   const userByName = new Map();
   for (const name of [...AUTHORS, ...EXTRA_TASTERS]) {
-    userByName.set(name, ensureUser(name, passwordHash));
+    userByName.set(name, await ensureUser(name, passwordHash));
   }
   const allNames = [...AUTHORS, ...EXTRA_TASTERS];
 
-  RECIPES.forEach((recipe, idx) => {
+  for (let idx = 0; idx < RECIPES.length; idx++) {
+    const recipe = RECIPES[idx];
     const author = userByName.get(recipe.author);
-    const recipeId = createRecipe({
+    const recipeId = await createRecipe({
       userId: author.id,
       title: recipe.title,
       story: recipe.story,
@@ -182,13 +183,13 @@ export function seed() {
     const rotated = raterPool.slice(idx % raterPool.length).concat(raterPool.slice(0, idx % raterPool.length));
     const raters = rotated.slice(0, recipe.ratingCount);
     const stars = distributeStars(recipe.ratingSum, recipe.ratingCount);
-    raters.forEach((raterName, i) => {
-      upsertRating({ recipeId, userId: userByName.get(raterName).id, stars: stars[i] });
-    });
+    for (let i = 0; i < raters.length; i++) {
+      await upsertRating({ recipeId, userId: userByName.get(raters[i]).id, stars: stars[i] });
+    }
 
-    recipe.comments.forEach((c) => {
+    for (const c of recipe.comments) {
       const commenter = userByName.get(c.author);
-      if (commenter) addComment({ recipeId, userId: commenter.id, text: c.text });
-    });
-  });
+      if (commenter) await addComment({ recipeId, userId: commenter.id, text: c.text });
+    }
+  }
 }
