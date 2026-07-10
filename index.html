@@ -143,6 +143,12 @@
   .theme-swatch:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
   .theme-swatch.active { border-color: var(--ink); border-width: 3px; }
 
+  .theme-picker-inline {
+    display:grid; grid-template-columns:repeat(3,1fr); grid-auto-rows:1fr; gap:3px;
+    flex:none;
+  }
+  .theme-swatch-sm { width:14px; height:14px; }
+
   @media (max-width: 860px) {
     .two-col { grid-template-columns: 1fr !important; }
     .four-col { grid-template-columns: 1fr 1fr !important; }
@@ -306,6 +312,12 @@
     </div>`;
   }
 
+  function renderThemePickerInline() {
+    return `<div class="theme-picker-inline" role="group" aria-label="Color theme">
+      ${THEMES.map((t) => `<button type="button" class="theme-swatch theme-swatch-sm${state.theme === t.key ? ' active' : ''}" data-action="set-theme" data-theme="${t.key}" title="${esc(t.name)}" aria-label="${esc(t.name)} theme" aria-pressed="${state.theme === t.key}" style="background:linear-gradient(135deg, ${t.primary} 50%, ${t.accent} 50%);"></button>`).join('')}
+    </div>`;
+  }
+
   function render() {
     if (state.screen === 'loading') { app.innerHTML = ''; return; }
     if (state.screen === 'login') { app.innerHTML = renderAuth() + renderThemePicker(); return; }
@@ -329,7 +341,7 @@
            </div>`
         : `<div class="toast">${esc(state.toast)}</div>`;
     }
-    app.innerHTML = renderHeader() + content + toastHtml + renderThemePicker();
+    app.innerHTML = renderHeader() + content + toastHtml;
   }
 
   function renderAuth() {
@@ -399,6 +411,7 @@
       </div>
       <div style="flex:1;"></div>
       <button data-action="go-upload" class="btn btn-accent" style="white-space:nowrap;">+ Share a recipe</button>
+      ${renderThemePickerInline()}
       <div class="avatar" data-action="go-profile" style="width:38px;height:38px;font-size:14px;cursor:pointer;">${esc(initial)}</div>
       <div data-action="logout" style="font-size:13px;color:var(--muted);cursor:pointer;">Log out</div>
     </div>`;
