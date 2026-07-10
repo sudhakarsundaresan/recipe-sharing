@@ -211,6 +211,8 @@
     extracting: false, extractProgress: 0, extractMode: 'youtube',
     myRecipes: [],
     duplicateRecipe: null,
+    editingRecipeId: null,
+    confirmDelete: false,
   };
 
   applyTheme(state.theme);
@@ -232,9 +234,13 @@
       body: opts.body ? JSON.stringify(opts.body) : undefined,
     });
     let data = {};
-    try { data = await res.json(); } catch (e) { /* empty body */ }
+    let parseFailed = false;
+    try { data = await res.json(); } catch (e) { parseFailed = true; }
     if (!res.ok) {
-      const err = new Error(data.error || data.message || 'Something went wrong.');
+      const fallback = parseFailed
+        ? `Server error (${res.status}). Please try again in a moment.`
+        : 'Something went wrong. Please try again.';
+      const err = new Error(data.error || data.message || fallback);
       err.status = res.status;
       err.data = data;
       throw err;
@@ -339,6 +345,21 @@
     </div>`;
   }
 
+  function renderConfirmDelete() {
+    const r = state.selectedRecipe;
+    return `<div class="overlay-backdrop" style="z-index:95;">
+      <div class="card" style="padding:32px 36px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:toastInCenter .2s ease;">
+        <div style="font-size:28px;margin-bottom:12px;">🗑️</div>
+        <div class="serif" style="font-size:19px;font-weight:600;margin-bottom:10px;">Delete "${esc(r.title)}"?</div>
+        <div style="font-size:14px;color:var(--body-text);line-height:1.6;margin-bottom:24px;">This can't be undone — the recipe, its ratings, and its comments will all be removed.</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button type="button" data-action="cancel-delete" class="btn btn-outline">Cancel</button>
+          <button type="button" data-action="confirm-delete" class="btn" style="background:var(--error);color:var(--on-color);">Delete recipe</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   function render() {
     if (state.screen === 'loading') { app.innerHTML = ''; return; }
     if (state.screen === 'login') { app.innerHTML = renderAuth() + renderThemePicker(); return; }
@@ -363,7 +384,8 @@
         : `<div class="toast">${esc(state.toast)}</div>`;
     }
     const duplicateHtml = state.duplicateRecipe ? renderDuplicatePrompt() : '';
-    app.innerHTML = renderHeader() + content + toastHtml + duplicateHtml;
+    const confirmDeleteHtml = state.confirmDelete ? renderConfirmDelete() : '';
+    app.innerHTML = renderHeader() + content + toastHtml + duplicateHtml + confirmDeleteHtml;
   }
 
   function renderAuth() {
@@ -523,7 +545,12 @@
       <div data-action="go-browse" style="font-size:13.5px;color:var(--primary);cursor:pointer;margin-bottom:22px;font-weight:600;">← Back to recipes</div>
       <div style="width:100%;height:440px;border-radius:20px;overflow:hidden;margin-bottom:28px;${heroStyle}">${aiTag}</div>
       <div class="serif" style="font-size:36px;font-weight:600;margin-bottom:6px;">${esc(r.title)}</div>
-      <div style="font-size:14px;color:var(--muted);margin-bottom:18px;">by ${esc(r.author)}</div>
+      <div style="font-size:14px;color:var(--muted);margin-bottom:8px;">by ${esc(r.author)}</div>
+      ${state.currentUser && r.userId === state.currentUser.id ? `
+        <div style="display:flex;gap:16px;margin-bottom:18px;">
+          <span data-action="edit-recipe" style="font-size:13px;color:var(--primary);cursor:pointer;font-weight:600;">Edit recipe</span>
+          <span data-action="request-delete" style="font-size:13px;color:var(--error);cursor:pointer;font-weight:600;">Delete recipe</span>
+        </div>` : `<div style="margin-bottom:10px;"></div>`}
       <div style="font-size:16px;line-height:1.7;color:var(--body-text);font-style:italic;max-width:700px;margin-bottom:24px;">${esc(r.story)}</div>
       <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px;">
         <div class="chip">⏱ ${esc(r.cookTime)} min</div>
@@ -616,19 +643,21 @@
 
   function renderUpload() {
     const d = state.draft;
-    const mode = state.uploadMode;
+    const isEditing = !!state.editingRecipeId;
+    const mode = isEditing ? 'own' : state.uploadMode;
     const isExternal = mode !== 'own';
     const urlLabel = mode === 'youtube' ? 'YouTube video link' : 'Recipe page link';
     const urlPlaceholder = mode === 'youtube' ? 'https://youtube.com/watch?v=...' : 'https://example.com/recipe';
 
     return `
     <div style="max-width:760px;margin:0 auto;padding:40px 40px 100px;">
-      <div class="serif" style="font-size:30px;font-weight:600;margin-bottom:22px;">Share your recipe</div>
+      <div class="serif" style="font-size:30px;font-weight:600;margin-bottom:22px;">${isEditing ? 'Edit your recipe' : 'Share your recipe'}</div>
+      ${isEditing ? '' : `
       <div style="display:flex;gap:6px;background:var(--panel-bg);border-radius:12px;padding:4px;margin-bottom:26px;">
         <button type="button" data-action="set-mode-own" style="flex:1;border:none;border-radius:9px;padding:11px 6px;font-size:13.5px;font-weight:600;cursor:pointer;background:${mode === 'own' ? 'var(--card-bg)' : 'transparent'};color:${mode === 'own' ? 'var(--ink)' : 'var(--muted)'};">Write your own recipe</button>
         <button type="button" data-action="set-mode-youtube" style="flex:1;border:none;border-radius:9px;padding:11px 6px;font-size:13.5px;font-weight:600;cursor:pointer;background:${mode === 'youtube' ? 'var(--card-bg)' : 'transparent'};color:${mode === 'youtube' ? 'var(--ink)' : 'var(--muted)'};">▶ Share a YouTube recipe</button>
         <button type="button" data-action="set-mode-link" style="flex:1;border:none;border-radius:9px;padding:11px 6px;font-size:13.5px;font-weight:600;cursor:pointer;background:${mode === 'link' ? 'var(--card-bg)' : 'transparent'};color:${mode === 'link' ? 'var(--ink)' : 'var(--muted)'};">🔗 Share a website recipe</button>
-      </div>
+      </div>`}
       <form data-form="recipe" style="display:flex;flex-direction:column;gap:22px;">
         ${heroPickerHtml()}
         <div><label class="field-label">Title</label><input class="field" name="title" placeholder="Grandma's Golden Squash Soup" value="${esc(d.title)}"/></div>
@@ -680,7 +709,7 @@
             <div style="font-size:19px;line-height:1;flex:none;">⚠️</div>
             <div style="font-size:14px;font-weight:600;color:var(--error);line-height:1.5;">${esc(state.draftError)}</div>
           </div>` : ''}
-        <button type="submit" class="btn btn-accent" style="padding:15px 0;border-radius:12px;font-size:15.5px;margin-top:6px;">Publish recipe</button>
+        <button type="submit" class="btn btn-accent" style="padding:15px 0;border-radius:12px;font-size:15.5px;margin-top:6px;">${isEditing ? 'Save changes' : 'Publish recipe'}</button>
       </form>
     </div>`;
   }
@@ -758,8 +787,21 @@
 
   function goUpload() {
     setState({
-      screen: 'upload', filterPanelOpen: false, uploadMode: 'own', draftError: '',
+      screen: 'upload', filterPanelOpen: false, uploadMode: 'own', draftError: '', editingRecipeId: null,
       draft: { title: '', story: '', cookTime: '', servings: '', difficulty: 'Easy', diet: 'omnivore', ingredients: [''], steps: [''], heroKind: 'photo', aiVariant: 0, sourceUrl: '' },
+    });
+  }
+
+  function goEditRecipe(r) {
+    setState({
+      screen: 'upload', filterPanelOpen: false, uploadMode: 'own', draftError: '', editingRecipeId: r.id,
+      draft: {
+        title: r.title, story: r.story, cookTime: r.cookTime, servings: r.servings,
+        difficulty: r.difficulty, diet: r.diet,
+        ingredients: r.ingredients.length ? [...r.ingredients] : [''],
+        steps: r.steps.length ? [...r.steps] : [''],
+        heroKind: r.heroKind, aiVariant: r.aiVariant, sourceUrl: r.sourceUrl || '',
+      },
     });
   }
 
@@ -864,6 +906,17 @@
             const ta = document.querySelector('textarea[name="text"]');
             if (ta) ta.focus();
           });
+          break;
+        }
+        case 'edit-recipe': goEditRecipe(state.selectedRecipe); break;
+        case 'request-delete': setState({ confirmDelete: true }); break;
+        case 'cancel-delete': setState({ confirmDelete: false }); break;
+        case 'confirm-delete': {
+          const id = state.selectedRecipe.id;
+          await api('/recipes/' + id, { method: 'DELETE' });
+          setState({ confirmDelete: false });
+          showToast('Recipe deleted.');
+          await goBrowse();
           break;
         }
         case 'set-login-mode': setState({ authMode: 'login', authError: '' }); break;
@@ -1000,7 +1053,23 @@
 
         if (!d.title.trim()) { setState({ draftError: 'Please add a title.' }); return; }
 
-        if (state.uploadMode === 'own') {
+        if (state.editingRecipeId) {
+          const ingredients = d.ingredients.map((x) => x.trim()).filter(Boolean);
+          const steps = d.steps.map((x) => x.trim()).filter(Boolean);
+          if (ingredients.length === 0 || steps.length === 0) {
+            setState({ draftError: 'Please add a title, at least one ingredient and one step.' });
+            return;
+          }
+          setState({ draftError: '' });
+          const id = state.editingRecipeId;
+          await api('/recipes/' + id, { method: 'PUT', body: {
+            title: d.title, story: d.story, cookTime: d.cookTime, servings: d.servings,
+            difficulty: d.difficulty, diet: d.diet, ingredients, steps,
+          } });
+          setState({ editingRecipeId: null });
+          showToast('Recipe updated!');
+          await openRecipe(id);
+        } else if (state.uploadMode === 'own') {
           const ingredients = d.ingredients.map((x) => x.trim()).filter(Boolean);
           const steps = d.steps.map((x) => x.trim()).filter(Boolean);
           if (ingredients.length === 0 || steps.length === 0) {

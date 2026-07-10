@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createUser, getUserByEmail, getUserById,
-  createRecipe, listRecipes, listRecipesByUser, getRecipeById, getRecipeByVideoId,
+  createRecipe, updateRecipe, deleteRecipe, listRecipes, listRecipesByUser, getRecipeById, getRecipeByVideoId,
   upsertRating, addComment, countRecipesByUser,
 } from './db.js';
 import { seed } from './seed-data.js';
@@ -44,6 +44,7 @@ function cardShape(r) {
   const avg = Number(r.avg_stars) || 0;
   return {
     id: r.id,
+    userId: r.user_id,
     title: r.title,
     author: r.author_name,
     diet: r.diet,
@@ -319,6 +320,44 @@ app.get('/api/recipes/:id', asyncHandler(async (req, res) => {
   });
 }));
 
+app.put('/api/recipes/:id', requireAuth, asyncHandler(async (req, res) => {
+  const recipe = await getRecipeById(Number(req.params.id), null);
+  if (!recipe) return res.status(404).json({ error: 'Recipe not found.' });
+  if (recipe.user_id !== req.session.userId) {
+    return res.status(403).json({ error: 'You can only edit recipes you submitted.' });
+  }
+
+  const b = req.body || {};
+  const title = String(b.title || '').trim();
+  if (!title) return res.status(400).json({ error: 'Please add a title.' });
+  const ingredients = (Array.isArray(b.ingredients) ? b.ingredients : []).map((s) => String(s).trim()).filter(Boolean);
+  const steps = (Array.isArray(b.steps) ? b.steps : []).map((s) => String(s).trim()).filter(Boolean);
+  if (ingredients.length === 0 || steps.length === 0) {
+    return res.status(400).json({ error: 'Please add a title, at least one ingredient and one step.' });
+  }
+  const diet = ['omnivore', 'vegetarian', 'vegan'].includes(b.diet) ? b.diet : recipe.diet;
+  const difficulty = ['Easy', 'Medium', 'Hard'].includes(b.difficulty) ? b.difficulty : recipe.difficulty;
+
+  await updateRecipe(recipe.id, {
+    title,
+    story: String(b.story || '').trim() || recipe.story,
+    cookTime: String(b.cookTime || '').trim() || '—',
+    servings: String(b.servings || '').trim() || '—',
+    difficulty, diet, ingredients, steps,
+  });
+  res.json({ id: recipe.id });
+}));
+
+app.delete('/api/recipes/:id', requireAuth, asyncHandler(async (req, res) => {
+  const recipe = await getRecipeById(Number(req.params.id), null);
+  if (!recipe) return res.status(404).json({ error: 'Recipe not found.' });
+  if (recipe.user_id !== req.session.userId) {
+    return res.status(403).json({ error: 'You can only delete recipes you submitted.' });
+  }
+  await deleteRecipe(recipe.id);
+  res.json({ ok: true });
+}));
+
 app.put('/api/recipes/:id/rating', requireAuth, asyncHandler(async (req, res) => {
   const stars = Number(req.body.stars);
   if (!Number.isInteger(stars) || stars < 1 || stars > 5) {
@@ -339,7 +378,13 @@ app.post('/api/recipes/:id/comments', requireAuth, asyncHandler(async (req, res)
   res.json({ comment });
 }));
 
-app.use(express.static(__dirname));
+app.use(express.static(__dirname, {
+  setHeaders: (res, filePath) => {
+    // The frontend is a single index.html file — never let a browser or
+    // intermediary cache serve a stale copy after a deploy.
+    if (filePath.endsWith('index.html')) res.setHeader('Cache-Control', 'no-cache');
+  },
+}));
 
 // Catches errors forwarded by asyncHandler (e.g. a lost DB connection).
 // Doesn't leak internal error details to the client.

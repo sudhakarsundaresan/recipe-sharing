@@ -181,6 +181,38 @@ export async function createRecipe({
   });
 }
 
+export async function updateRecipe(id, {
+  title, story, cookTime, servings, difficulty, diet, ingredients, steps,
+}) {
+  return transaction(async (client) => {
+    await client.query(
+      toPgQuery(`UPDATE recipes SET
+        title = ?, story = ?, cook_time = ?, servings = ?, difficulty = ?, diet = ?
+       WHERE id = ?`),
+      [title, story, cookTime, servings, difficulty, diet, id]
+    );
+    await client.query(toPgQuery('DELETE FROM recipe_ingredients WHERE recipe_id = ?'), [id]);
+    await client.query(toPgQuery('DELETE FROM recipe_steps WHERE recipe_id = ?'), [id]);
+    for (let i = 0; i < ingredients.length; i++) {
+      await client.query(
+        toPgQuery('INSERT INTO recipe_ingredients (recipe_id, position, text) VALUES (?, ?, ?)'),
+        [id, i, ingredients[i]]
+      );
+    }
+    for (let i = 0; i < steps.length; i++) {
+      await client.query(
+        toPgQuery('INSERT INTO recipe_steps (recipe_id, position, text) VALUES (?, ?, ?)'),
+        [id, i, steps[i]]
+      );
+    }
+    return id;
+  });
+}
+
+export async function deleteRecipe(id) {
+  await run('DELETE FROM recipes WHERE id = ?', [id]);
+}
+
 const RATING_AGG_JOIN = `
   LEFT JOIN (
     SELECT recipe_id, AVG(stars) AS avg_stars, COUNT(*) AS rating_count
