@@ -210,6 +210,7 @@
     draftError: '',
     extracting: false, extractProgress: 0, extractMode: 'youtube',
     myRecipes: [],
+    duplicateRecipe: null,
   };
 
   applyTheme(state.theme);
@@ -232,7 +233,12 @@
     });
     let data = {};
     try { data = await res.json(); } catch (e) { /* empty body */ }
-    if (!res.ok) throw new Error(data.error || 'Something went wrong.');
+    if (!res.ok) {
+      const err = new Error(data.error || data.message || 'Something went wrong.');
+      err.status = res.status;
+      err.data = data;
+      throw err;
+    }
     return data;
   }
 
@@ -318,6 +324,21 @@
     </div>`;
   }
 
+  function renderDuplicatePrompt() {
+    const d = state.duplicateRecipe;
+    return `<div class="overlay-backdrop" style="z-index:95;">
+      <div class="card" style="padding:32px 36px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,0.25);animation:toastInCenter .2s ease;">
+        <div style="font-size:28px;margin-bottom:12px;">🎬</div>
+        <div class="serif" style="font-size:19px;font-weight:600;margin-bottom:10px;">Already shared: "${esc(d.title)}"</div>
+        <div style="font-size:14px;color:var(--body-text);line-height:1.6;margin-bottom:24px;">This recipe has already been shared before by ${esc(d.author)}. Would you like to connect with a fellow fan of this recipe?</div>
+        <div style="display:flex;gap:10px;justify-content:center;">
+          <button type="button" data-action="dismiss-duplicate" class="btn btn-outline">No thanks</button>
+          <button type="button" data-action="view-duplicate" class="btn btn-accent">Yes, take me there</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   function render() {
     if (state.screen === 'loading') { app.innerHTML = ''; return; }
     if (state.screen === 'login') { app.innerHTML = renderAuth() + renderThemePicker(); return; }
@@ -341,7 +362,8 @@
            </div>`
         : `<div class="toast">${esc(state.toast)}</div>`;
     }
-    app.innerHTML = renderHeader() + content + toastHtml;
+    const duplicateHtml = state.duplicateRecipe ? renderDuplicatePrompt() : '';
+    app.innerHTML = renderHeader() + content + toastHtml + duplicateHtml;
   }
 
   function renderAuth() {
@@ -803,8 +825,12 @@
       await openRecipe(data.id);
     } catch (err) {
       clearInterval(extractTimer);
-      setState({ extracting: false, extractProgress: 0, screen: 'upload', draftError: err.message });
-      showToast(err.message, 'error');
+      if (err.status === 409 && err.data && err.data.duplicate) {
+        setState({ extracting: false, extractProgress: 0, screen: 'upload', duplicateRecipe: err.data.existingRecipe });
+      } else {
+        setState({ extracting: false, extractProgress: 0, screen: 'upload', draftError: err.message });
+        showToast(err.message, 'error');
+      }
     }
   }
 
@@ -827,6 +853,17 @@
           const key = el.getAttribute('data-theme');
           applyTheme(key);
           setState({ theme: key });
+          break;
+        }
+        case 'dismiss-duplicate': setState({ duplicateRecipe: null }); break;
+        case 'view-duplicate': {
+          const targetId = state.duplicateRecipe.id;
+          setState({ duplicateRecipe: null });
+          await openRecipe(targetId);
+          requestAnimationFrame(() => {
+            const ta = document.querySelector('textarea[name="text"]');
+            if (ta) ta.focus();
+          });
           break;
         }
         case 'set-login-mode': setState({ authMode: 'login', authError: '' }); break;

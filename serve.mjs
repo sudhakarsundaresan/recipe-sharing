@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
   createUser, getUserByEmail, getUserById,
-  createRecipe, listRecipes, listRecipesByUser, getRecipeById,
+  createRecipe, listRecipes, listRecipesByUser, getRecipeById, getRecipeByVideoId,
   upsertRating, addComment, countRecipesByUser,
 } from './db.js';
 import { seed } from './seed-data.js';
@@ -260,6 +260,16 @@ app.post('/api/recipes', requireAuth, asyncHandler(async (req, res) => {
   }
 
   if (mode === 'youtube') {
+    const videoId = extractYouTubeId(sourceUrl);
+    const existing = await getRecipeByVideoId(videoId);
+    if (existing) {
+      return res.status(409).json({
+        duplicate: true,
+        message: 'This recipe has already been shared before.',
+        existingRecipe: { id: existing.id, title: existing.title, author: existing.author_name },
+      });
+    }
+
     let extracted;
     try {
       extracted = await extractRecipeFromYouTube(sourceUrl);
@@ -275,7 +285,7 @@ app.post('/api/recipes', requireAuth, asyncHandler(async (req, res) => {
       cookTime: extracted.cookTime || '—',
       servings: extracted.servings || '—',
       difficulty: 'Medium',
-      diet, sourceType: 'youtube', sourceUrl, heroKind, aiVariant,
+      diet, sourceType: 'youtube', sourceUrl, heroKind, aiVariant, videoId,
       ingredients: extracted.ingredients, steps: extracted.steps,
     });
     return res.json({ id });

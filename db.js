@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS recipes (
   source_url TEXT NOT NULL DEFAULT '',
   hero_kind TEXT NOT NULL DEFAULT 'photo',
   ai_variant INTEGER NOT NULL DEFAULT 0,
+  video_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -80,7 +81,26 @@ CREATE INDEX IF NOT EXISTS idx_steps_recipe ON recipe_steps(recipe_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_recipe ON ratings(recipe_id);
 CREATE INDEX IF NOT EXISTS idx_ratings_user ON ratings(user_id);
 CREATE INDEX IF NOT EXISTS idx_comments_recipe ON comments(recipe_id);
+
+-- Migration: video_id was added after recipes already existed in production,
+-- so CREATE TABLE IF NOT EXISTS above won't retroactively add it.
+ALTER TABLE recipes ADD COLUMN IF NOT EXISTS video_id TEXT;
+CREATE INDEX IF NOT EXISTS idx_recipes_video_id ON recipes(video_id);
 `);
+
+// Backfill video_id for any pre-existing YouTube recipes from before this
+// column existed, so duplicate detection covers them too.
+function extractYouTubeIdForMigration(url) {
+  const m = String(url || '').match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|shorts\/))([a-zA-Z0-9_-]{6,})/);
+  return m ? m[1] : null;
+}
+{
+  const rows = await pool.query(`SELECT id, source_url FROM recipes WHERE source_type = 'youtube' AND video_id IS NULL`);
+  for (const r of rows.rows) {
+    const videoId = extractYouTubeIdForMigration(r.source_url);
+    if (videoId) await pool.query('UPDATE recipes SET video_id = $1 WHERE id = $2', [videoId, r.id]);
+  }
+}
 
 // Lets every query below keep using SQLite-style "?" placeholders; this
 // rewrites them to Postgres's positional "$1, $2, ..." before executing.
@@ -135,14 +155,14 @@ export async function getUserById(id) {
 
 export async function createRecipe({
   userId, title, story, cookTime, servings, difficulty, diet,
-  sourceType, sourceUrl, heroKind, aiVariant, ingredients, steps,
+  sourceType, sourceUrl, heroKind, aiVariant, ingredients, steps, videoId,
 }) {
   return transaction(async (client) => {
     const insertRecipe = await client.query(
       toPgQuery(`INSERT INTO recipes
-        (user_id, title, story, cook_time, servings, difficulty, diet, source_type, source_url, hero_kind, ai_variant)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
-      [userId, title, story, cookTime, servings, difficulty, diet, sourceType, sourceUrl, heroKind, aiVariant]
+        (user_id, title, story, cook_time, servings, difficulty, diet, source_type, source_url, hero_kind, ai_variant, video_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id`),
+      [userId, title, story, cookTime, servings, difficulty, diet, sourceType, sourceUrl, heroKind, aiVariant, videoId || null]
     );
     const recipeId = insertRecipe.rows[0].id;
     for (let i = 0; i < ingredients.length; i++) {
@@ -225,6 +245,17 @@ async function getIngredientsForRecipe(id) {
 async function getStepsForRecipe(id) {
   const rows = await all('SELECT text FROM recipe_steps WHERE recipe_id = ? ORDER BY position ASC', [id]);
   return rows.map((row) => row.text);
+}
+
+export async function getRecipeByVideoId(videoId) {
+  if (!videoId) return null;
+  return get(
+    `SELECT r.*, u.name AS author_name
+     FROM recipes r JOIN users u ON u.id = r.user_id
+     WHERE r.source_type = 'youtube' AND r.video_id = ?
+     LIMIT 1`,
+    [videoId]
+  );
 }
 
 export async function getRecipeById(id, currentUserId) {
