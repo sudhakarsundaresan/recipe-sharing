@@ -69,7 +69,8 @@
   .stars { display:inline-flex; align-items:center; gap:3px; }
   .stars svg { display:block; }
 
-  .toast { position:fixed; bottom:28px; right:28px; background:var(--ink); color:#fff; padding:14px 22px; border-radius:12px; font-size:14px; box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:toastIn .2s ease; z-index:50; }
+  .toast { position:fixed; bottom:28px; right:28px; max-width:360px; background:var(--ink); color:#fff; padding:14px 22px; border-radius:12px; font-size:14px; line-height:1.5; box-shadow:0 10px 30px rgba(0,0,0,0.25); animation:toastIn .2s ease; z-index:50; }
+  .toast.toast-error { background:var(--error); }
   .overlay-backdrop { position:fixed; inset:0; background:rgba(54,43,31,0.45); display:flex; align-items:center; justify-content:center; z-index:100; }
 
   .filter-panel { position:absolute; top:46px; left:0; width:300px; background:var(--card-bg); border-radius:14px; box-shadow:0 16px 40px rgba(54,43,31,0.18); border:1px solid var(--border); padding:18px; z-index:30; display:flex; flex-direction:column; gap:14px; }
@@ -106,7 +107,7 @@
     recipes: [],
     query: '', sortRecent: false, veganOnly: false, vegetarianOnly: false, ingredientQuery: '', filterPanelOpen: false,
     selectedId: null, selectedRecipe: null,
-    toast: '',
+    toast: '', toastType: 'info',
     uploadMode: 'own',
     draft: { title: '', story: '', cookTime: '', servings: '', difficulty: 'Easy', diet: 'omnivore', ingredients: [''], steps: [''], heroKind: 'photo', aiVariant: 0, sourceUrl: '' },
     draftError: '',
@@ -136,11 +137,12 @@
     return data;
   }
 
-  function showToast(msg) {
+  function showToast(msg, type) {
     clearTimeout(toastTimer);
     state.toast = msg;
+    state.toastType = type || 'info';
     render();
-    toastTimer = setTimeout(() => { state.toast = ''; render(); }, 2600);
+    toastTimer = setTimeout(() => { state.toast = ''; render(); }, type === 'error' ? 4500 : 2600);
   }
 
   function setState(patch) { Object.assign(state, patch); render(); }
@@ -217,7 +219,8 @@
     else if (state.screen === 'upload') content = renderUpload();
     else if (state.screen === 'profile') content = renderProfile();
 
-    app.innerHTML = renderHeader() + content + (state.toast ? `<div class="toast">${esc(state.toast)}</div>` : '');
+    const toastClass = state.toastType === 'error' ? 'toast toast-error' : 'toast';
+    app.innerHTML = renderHeader() + content + (state.toast ? `<div class="${toastClass}">${esc(state.toast)}</div>` : '');
   }
 
   function renderAuth() {
@@ -528,7 +531,11 @@
             </div>
             <button type="button" data-action="add-step" class="btn" style="margin-top:10px;border:1px dashed var(--border-strong);background:transparent;color:var(--muted);">+ Add step</button>
           </div>`}
-        ${state.draftError ? `<div style="font-size:13px;color:var(--error);">${esc(state.draftError)}</div>` : ''}
+        ${state.draftError ? `
+          <div style="display:flex;gap:12px;align-items:flex-start;background:rgba(180,85,47,0.08);border:1px solid rgba(180,85,47,0.35);border-radius:12px;padding:14px 16px;">
+            <div style="font-size:19px;line-height:1;flex:none;">⚠️</div>
+            <div style="font-size:14px;font-weight:600;color:var(--error);line-height:1.5;">${esc(state.draftError)}</div>
+          </div>` : ''}
         <button type="submit" class="btn btn-accent" style="padding:15px 0;border-radius:12px;font-size:15.5px;margin-top:6px;">Publish recipe</button>
       </form>
     </div>`;
@@ -675,6 +682,7 @@
     } catch (err) {
       clearInterval(extractTimer);
       setState({ extracting: false, extractProgress: 0, screen: 'upload', draftError: err.message });
+      showToast(err.message, 'error');
     }
   }
 
